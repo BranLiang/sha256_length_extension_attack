@@ -8,16 +8,15 @@ module Sha256LengthExtensionAttack
   class Error < StandardError; end
 
   class << self
-    def generate_padding(length)
-      Sha256.new.generate_padding(length)
-    end
-
-    def generate_hash(extension_message, original_hash:, total_length:)
-      Sha256.new.generate_hash(
+    def generate(extension_message, original_hash:, original_bytesize:)
+      original_padding = original_bytesize == 0 ? "" : Sha256.new.generate_padding(original_bytesize * 8)
+      total_bitsize = (original_bytesize + original_padding.bytesize + extension_message.bytesize) * 8
+      extended_hash = Sha256.new.generate_hash(
         extension_message,
         original_hash,
-        total_length
+        total_bitsize
       )
+      [original_padding + extension_message, extended_hash]
     end
   end
 end

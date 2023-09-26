@@ -8,35 +8,41 @@ class TestSha256LengthExtensionAttack < Minitest::Test
     original_message = "name=bran"
     @payload = original_password + "::" + original_message
     @original_hash = Digest::SHA256.hexdigest(@payload)
+    puts "Original hash: #{@original_hash}"
   end
 
-  def test_generate_hash
+  def test_generate
     extended_message = "&admin=true"
-    padding = Sha256LengthExtensionAttack.generate_padding(@payload.bytesize * 8)
+    padding = Sha256.new.generate_padding(@payload.bytesize * 8)
 
     tampered_message = @payload + padding + extended_message
 
     expected_hash = Digest::SHA256.hexdigest(tampered_message)
-    extended_hash = Sha256LengthExtensionAttack.generate_hash(
+    suffix, extended_hash = Sha256LengthExtensionAttack.generate(
       extended_message,
       original_hash: @original_hash,
-      total_length: tampered_message.bytesize * 8
+      original_bytesize: @payload.bytesize
     )
     assert_equal(
       expected_hash,
       extended_hash
     )
+    assert_equal(
+      '"\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xA8&admin=true"',
+      suffix.inspect
+    )
   end
 
-  def test_generate_padding
+  def test_generate_empty_original_payload
     initial_hash = "6a09e667bb67ae853c6ef372a54ff53a510e527f9b05688c1f83d9ab5be0cd19"
+    _, result_hash = Sha256LengthExtensionAttack.generate(
+      @payload,
+      original_hash: initial_hash,
+      original_bytesize: 0
+    )
     assert_equal(
       @original_hash,
-      Sha256LengthExtensionAttack.generate_hash(
-        @payload,
-        original_hash: initial_hash,
-        total_length: @payload.bytesize * 8
-      )
+      result_hash
     )
   end
 end

@@ -1,39 +1,43 @@
-# Sha256LengthExtensionAttack
+# SHA-256 Length Extension Attack Demo
 
-TODO: Delete this and the text below, and describe your gem
-
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/sha256_length_extension_attack`. To experiment with that code, run `bin/console` for an interactive prompt.
+This is a simple Ruby library designed to demonstrate a [length extension attack](https://en.wikipedia.org/wiki/Length_extension_attack) on the SHA-256 hash algorithm.
 
 ## Installation
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_PRIOR_TO_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
-
-Install the gem and add to the application's Gemfile by executing:
-
-    $ bundle add UPDATE_WITH_YOUR_GEM_NAME_PRIOR_TO_RELEASE_TO_RUBYGEMS_ORG
-
-If bundler is not being used to manage dependencies, install the gem by executing:
-
-    $ gem install UPDATE_WITH_YOUR_GEM_NAME_PRIOR_TO_RELEASE_TO_RUBYGEMS_ORG
+```shell
+gem install sha256_length_extension_attack
+```
 
 ## Usage
+The original hash is calculated using the following process:
 
-TODO: Write usage instructions here
+```ruby
+secret = "SOMETHING_YOU_DONT_KNOW"
+Digest::SHA256.hexdigest(secret + "::" + "name=bran")
+```
 
-## Development
+The original hash value is: `10b8813fba3378e9cb6ecec95ab471cea46b09eb93607d0851e07e89390e4758`.
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+Now, let's say you want to tamper with the message and add an additional query parameter `admin=true` at the end. Since you don't know the exact content of the secret, you cannot generate the new hash directly. However, it's possible to guess the length of the password, and in the worst case, you may need to try several possible lengths. Let's assume you now know that the length of the password is `10`, making the original message byte size `21`. We'll call this value `original_bytesize`. You can use the following method to generate a new hash, including the original message, even though you still don't know the secret:
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+```ruby
+suffix, hash = Sha256LengthExtensionAttack.generate(
+    "admin=true",
+    original_hash: "10b8813fba3378e9cb6ecec95ab471cea46b09eb93607d0851e07e89390e4758",
+    original_bytesize: 21
+)
+```
 
-## Contributing
+If you inspect the `suffix` variable, you'll notice that it contains a sequence of bits before our targeted content. These bits are typically referred to as padding when hashing normally. However, in this case, we treat them as part of the normal message.
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/sha256_length_extension_attack. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[USERNAME]/sha256_length_extension_attack/blob/main/CODE_OF_CONDUCT.md).
+```ruby
+\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xA8&admin=true
+```
+
+The `hash` variable contains the resulting hash value, which you would normally generate using `Digest::SHA256.hexdigest(message)`.
+
+Congratulations, you have successfully completed a SHA-256 length extension attack!
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
-
-## Code of Conduct
-
-Everyone interacting in the Sha256LengthExtensionAttack project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/sha256_length_extension_attack/blob/main/CODE_OF_CONDUCT.md).
+This library is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
