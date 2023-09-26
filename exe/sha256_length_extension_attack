@@ -1,3 +1,35 @@
 #!/usr/bin/env ruby
 
 require "sha256_length_extension_attack"
+require "optparse"
+
+options = {}
+parser = OptionParser.new do |opts|
+  opts.banner = "Usage: sha256_length_extension_attack [options]"
+  opts.on("-m", "--message MESSAGE", "Message that will be attached at the end", :required) do |m|
+    options[:message] = m
+  end
+  opts.on("-o", "--original ORIGINAL", "Original message hash", :required) do |o|
+    options[:original] = o
+  end
+  opts.on("-s", "--size SIZE", "Original message size in byte", :required) do |s|
+    options[:size] = s.to_i
+  end
+end
+
+parser.parse!
+
+if options[:message].nil? || options[:original].nil? || options[:size].nil?
+  # Show help
+  puts parser.help
+  exit
+end
+
+suffix, extended_hash = Sha256LengthExtensionAttack.generate(
+  options[:message],
+  original_hash: options[:original],
+  original_bytesize: options[:size]
+)
+
+puts "Suffix: #{suffix.inspect}"
+puts "Extended hash: #{extended_hash}"
